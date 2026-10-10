@@ -5,28 +5,81 @@
 <PageTitle>Algorithm Visualizer</PageTitle>
 
 <section class="hero">
-    <h1>See how algorithms think.</h1>
-    <p>Watch classic algorithms run one step at a time. Play, pause, step through, and change the speed to build intuition for how they really work.</p>
+    <div class="hero-copy">
+        <span class="pill"><span class="dot"></span>@(SortingAlgorithms.All.Count + PathAlgorithms.All.Count) algorithms · step by step</span>
+        <h1>See how algorithms <span class="glow">think.</span></h1>
+        <p>Watch classic algorithms fire one step at a time. Play, pause, step through and change the speed to build real intuition for how they work.</p>
+        <div class="cta">
+            <a class="btn primary lg" href="sorting">
+                Launch sorting
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" /></svg>
+            </a>
+            <a class="btn lg" href="pathfinding">Explore pathfinding</a>
+        </div>
+    </div>
+    <div class="hero-visual">
+        <NeuralCore />
+    </div>
 </section>
 
-<h2>Sorting</h2>
+<section class="features">
+    <div class="panel feature">
+        <span class="mono accent">01 · Control time</span>
+        <h3>Play, pause, step</h3>
+        <p>Every algorithm is a lazy sequence of steps, so you can freeze any moment and advance one move at a time.</p>
+    </div>
+    <div class="panel feature">
+        <span class="mono accent">02 · Shape the world</span>
+        <h3>Draw walls &amp; weights</h3>
+        <p>Sketch obstacles and heavy terrain on the grid, then drag the start and end markers anywhere.</p>
+    </div>
+    <div class="panel feature">
+        <span class="mono accent">03 · Trust the output</span>
+        <h3>Tested for correctness</h3>
+        <p>Each implementation is verified by unit tests, so what you watch is what the algorithm really does.</p>
+    </div>
+</section>
+
+<div class="section-head">
+    <h2>Sorting</h2>
+    <span class="mono muted">@SortingAlgorithms.All.Count algorithms · bars of light</span>
+</div>
 <div class="cards">
-    @foreach (var a in SortingAlgorithms.All)
+    @for (int n = 0; n < SortingAlgorithms.All.Count; n++)
     {
+        var a = SortingAlgorithms.All[n];
         <a class="card" href="@($"sorting/{a.Id}")">
+            <div class="mini-bars" aria-hidden="true">
+                @for (int i = 0; i < 14; i++)
+                {
+                    var hot = i == (n + 1) * 3 % 14 || i == ((n + 1) * 3 + 5) % 14;
+                    <span class="@(hot ? "hot" : null)" style="height:@(18 + (i * 37 + (n + 1) * 53) % 82)%"></span>
+                }
+            </div>
             <h3>@a.Name</h3>
-            <p>Average <code>@a.AverageCase</code> · Space <code>@a.Space</code></p>
+            <p class="mono">avg @a.AverageCase · space @a.Space</p>
         </a>
     }
 </div>
 
-<h2>Pathfinding</h2>
+<div class="section-head">
+    <h2>Pathfinding</h2>
+    <span class="mono muted">@PathAlgorithms.All.Count algorithms · navigate the grid</span>
+</div>
 <div class="cards">
     @foreach (var a in PathAlgorithms.All)
     {
         <a class="card" href="@($"pathfinding/{a.Id}")">
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke-width="2" aria-hidden="true">
+                <circle cx="8" cy="36" r="4" fill="var(--signal)" />
+                <circle cx="36" cy="8" r="4" fill="var(--amber)" />
+                <path d="M8 36V22h14V8h14" stroke="var(--neuron)" stroke-dasharray="3 4" />
+            </svg>
             <h3>@a.Name</h3>
-            <p>@(a.Optimal ? "Finds the shortest path" : "Does not guarantee the shortest path") · @(a.Weighted ? "weighted" : "unweighted")</p>
+            <div class="tags mono">
+                <span class="tag @(a.Optimal ? "yes" : "no")">@(a.Optimal ? "shortest path" : "not guaranteed")</span>
+                <span class="tag">@(a.Weighted ? "weighted" : "unweighted")</span>
+            </div>
         </a>
     }
 </div>

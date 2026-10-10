@@ -1,10 +1,15 @@
 @inherits LayoutComponentBase
 
 <div class="shell">
+    <Starfield />
     <NavMenu />
     <main class="main">
         <article class="content">
             @Body
         </article>
     </main>
+    <footer class="site-footer">
+        <span>Built with Blazor WebAssembly</span>
+        <span class="mono">signal · orbit · step</span>
+    </footer>
 </div>

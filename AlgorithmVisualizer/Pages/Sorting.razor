@@ -5,9 +5,7 @@
 
 <PageTitle>@algo.Name · Algorithm Visualizer</PageTitle>
 
-<h1>Sorting</h1>
-
-<AlgoTabs BasePath="sorting" Items="tabs" SelectedId="@algo.Id" />
+<AlgoTabs BasePath="sorting" Items="tabs" SelectedId="@algo.Id" Eyebrow="Mission · Sorting" Title="@algo.Name" />
 
 <div class="controls">
     <button class="btn primary" @onclick="TogglePlay">@(running ? "Pause" : finished ? "Replay" : "Play")</button>
@@ -24,6 +22,7 @@
 </div>
 
 <div class="stage">
+    <div class="scan" aria-hidden="true"></div>
     <div class="bars @(size <= 30 ? "labeled" : null)">
         @for (int i = 0; i < data.Length; i++)
         {
@@ -33,7 +32,7 @@
     <div class="stats">
         <span>Comparisons <b>@comparisons</b></span>
         <span>Swaps / writes <b>@moves</b></span>
-        <span class="status">@(finished ? "Sorted ✓" : running ? "Sorting…" : "Ready")</span>
+        <span class="status"><span class="live-dot"></span>@(finished ? "Sorted ✓" : running ? "Sorting…" : "Ready")</span>
     </div>
 </div>
 

@@ -5,9 +5,7 @@
 
 <PageTitle>@algo.Name · Algorithm Visualizer</PageTitle>
 
-<h1>Pathfinding</h1>
-
-<AlgoTabs BasePath="pathfinding" Items="tabs" SelectedId="@algo.Id" />
+<AlgoTabs BasePath="pathfinding" Items="tabs" SelectedId="@algo.Id" Eyebrow="Mission · Navigation" Title="@algo.Name" />
 
 <div class="controls">
     <button class="btn primary" @onclick="TogglePlay">@(running ? "Pause" : finished ? "Replay" : "Play")</button>
@@ -33,6 +31,7 @@
 <p class="hint">Drag on the grid to draw. Drag the <b class="start-text">start</b> and <b class="end-text">end</b> markers to move them.</p>
 
 <div class="stage">
+    <div class="scan" aria-hidden="true"></div>
     <div class="grid-scroll">
         <div class="grid" style="--cols:@grid.Cols" @onmouseup="Release" @onmouseleave="Release">
             @for (int r = 0; r < grid.Rows; r++)
@@ -49,7 +48,7 @@
         <span>Cells visited <b>@visited</b></span>
         <span>Path length <b>@(pathLength == 0 ? "–" : pathLength.ToString())</b></span>
         <span>Path cost <b>@(pathLength == 0 ? "–" : pathCost.ToString())</b></span>
-        <span class="status">@Status</span>
+        <span class="status"><span class="live-dot"></span>@Status</span>
     </div>
 </div>
 

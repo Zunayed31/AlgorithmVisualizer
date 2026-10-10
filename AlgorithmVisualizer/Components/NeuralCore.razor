@@ -1,0 +1,44 @@
+<div class="neural-core" aria-hidden="true">
+    <div class="orbit"><span class="sat"></span></div>
+    <div class="orbit inner"><span class="sat amber"></span></div>
+    @foreach (var (cls, style) in edges)
+    {
+        <i class="@cls" style="@style"></i>
+    }
+    @foreach (var style in nodes)
+    {
+        <i class="neuron" style="@style"></i>
+    }
+</div>
+
+@code {
+    // A small 4-6-6-3 network laid out in a 540×460 box; every third synapse carries a travelling pulse.
+    private static readonly (int X, int Count)[] layers = [(90, 4), (210, 6), (330, 6), (450, 3)];
+    private static readonly string[] nodes;
+    private static readonly (string Class, string Style)[] edges;
+
+    static NeuralCore()
+    {
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var rng = new Random(3);
+        var pts = layers
+            .Select(l => Enumerable.Range(0, l.Count).Select(i => (X: (double)l.X, Y: 230 + (i - (l.Count - 1) / 2.0) * 62)).ToArray())
+            .ToArray();
+
+        nodes = pts.SelectMany((layer, li) => layer.Select((p, i) => string.Format(inv,
+            "left:{0}px;top:{1}px;animation-delay:{2:F2}s", p.X, p.Y, li * .45 + i * .13))).ToArray();
+
+        var list = new List<(string, string)>();
+        for (int l = 0; l < pts.Length - 1; l++)
+            foreach (var a in pts[l])
+                foreach (var b in pts[l + 1])
+                {
+                    double dx = b.X - a.X, dy = b.Y - a.Y;
+                    var live = list.Count % 3 == 0;
+                    list.Add((live ? "syn live" : "syn", string.Format(inv,
+                        "left:{0}px;top:{1}px;width:{2:F1}px;transform:rotate({3:F2}deg);animation-delay:{4:F2}s",
+                        a.X, a.Y, Math.Sqrt(dx * dx + dy * dy), Math.Atan2(dy, dx) * 180 / Math.PI, l * .8 + rng.NextDouble() * 2)));
+                }
+        edges = list.ToArray();
+    }
+}

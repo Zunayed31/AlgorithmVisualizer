@@ -1,0 +1,24 @@
+<div class="stars" aria-hidden="true">
+    @foreach (var s in stars)
+    {
+        <i class="star" style="@s"></i>
+    }
+</div>
+
+@code {
+    // Fixed seed so the sky is the same on every render and every page.
+    private static readonly string[] stars = Build(140);
+
+    private static string[] Build(int count)
+    {
+        var rng = new Random(7);
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        return Enumerable.Range(0, count).Select(_ =>
+        {
+            var size = rng.NextDouble() < .85 ? 1.5 : 2.5;
+            return string.Format(inv,
+                "left:{0:F2}%;top:{1:F2}%;width:{2}px;height:{2}px;animation-delay:{3:F2}s;animation-duration:{4:F2}s",
+                rng.NextDouble() * 100, rng.NextDouble() * 100, size, rng.NextDouble() * 5, 3 + rng.NextDouble() * 5);
+        }).ToArray();
+    }
+}
