@@ -32,4 +32,5 @@ Subclass `SortAlgorithm` or `PathAlgorithm`, yield steps, and add it to the `All
 1. In the repository, go to **Settings → Pages** and set **Source** to **GitHub Actions**.
 2. Push to `master`. `.github/workflows/deploy.yml` runs the tests, publishes the app, sets `<base href>` to `/<repo-name>/`, adds a `404.html` fallback so deep links work, and deploys.
 
-The site will be at `https://<user>.github.io/<repo-name>/`.
+The site will be at `https://<user>.github.io/<repo-name>/`. 
+In this case: https://zunayed31.github.io/AlgorithmVisualizer/
