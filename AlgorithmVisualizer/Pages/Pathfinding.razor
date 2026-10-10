@@ -1,0 +1,292 @@
+@page "/pathfinding"
+@page "/pathfinding/{AlgoId}"
+@using AlgorithmVisualizer.Algorithms.Pathfinding
+@implements IDisposable
+
+<PageTitle>@algo.Name · Algorithm Visualizer</PageTitle>
+
+<h1>Pathfinding</h1>
+
+<AlgoTabs BasePath="pathfinding" Items="tabs" SelectedId="@algo.Id" />
+
+<div class="controls">
+    <button class="btn primary" @onclick="TogglePlay">@(running ? "Pause" : finished ? "Replay" : "Play")</button>
+    <button class="btn" @onclick="StepOnce" disabled="@running">Step</button>
+
+    <div class="segmented" role="radiogroup" aria-label="Drawing tool">
+        @foreach (var t in Enum.GetValues<Tool>())
+        {
+            var tool = t;
+            <button class="seg @(tool == currentTool ? "active" : null)" role="radio" aria-checked="@((tool == currentTool).ToString().ToLowerInvariant())" @onclick="() => currentTool = tool">@ToolName(tool)</button>
+        }
+    </div>
+
+    <button class="btn" @onclick="ClearPath" disabled="@running">Clear path</button>
+    <button class="btn" @onclick="ClearBoard" disabled="@running">Clear board</button>
+    <button class="btn" @onclick="RandomWalls" disabled="@running">Random walls</button>
+
+    <label class="slider">Speed <output>@speed</output>
+        <input type="range" min="1" max="10" @bind="speed" @bind:event="oninput" />
+    </label>
+</div>
+
+<p class="hint">Drag on the grid to draw. Drag the <b class="start-text">start</b> and <b class="end-text">end</b> markers to move them.</p>
+
+<div class="stage">
+    <div class="grid-scroll">
+        <div class="grid" style="--cols:@grid.Cols" @onmouseup="Release" @onmouseleave="Release">
+            @for (int r = 0; r < grid.Rows; r++)
+            {
+                for (int c = 0; c < grid.Cols; c++)
+                {
+                    var p = new Point(r, c);
+                    <div class="cell @CellClass(p)" @onmousedown="e => Press(p)" @onmousedown:preventDefault @onmouseenter="e => Hover(p, e)"></div>
+                }
+            }
+        </div>
+    </div>
+    <div class="stats">
+        <span>Cells visited <b>@visited</b></span>
+        <span>Path length <b>@(pathLength == 0 ? "–" : pathLength.ToString())</b></span>
+        <span>Path cost <b>@(pathLength == 0 ? "–" : pathCost.ToString())</b></span>
+        <span class="status">@Status</span>
+    </div>
+</div>
+
+<Legend Items="legend" />
+
+<AlgoInfo Title="@algo.Name" Description="@algo.Description" Facts="Facts" />
+
+@code {
+    private enum Tool { Wall, Weight, Erase }
+    private enum Drag { None, Paint, Start, End }
+    private enum Visual : byte { None, Frontier, Visited, Path }
+
+    private const int Rows = 20, Cols = 40;
+
+    private static readonly int[] DelayMs = [200, 100, 50, 25, 12, 6, 3, 1, 1, 1];
+    private static readonly int[] StepsPerTick = [1, 1, 1, 1, 1, 1, 1, 2, 4, 8];
+
+    private static readonly IReadOnlyList<(string, string)> tabs =
+        PathAlgorithms.All.Select(a => (a.Id, a.Name)).ToList();
+
+    private static readonly (string, string)[] legend =
+    [
+        ("start", "Start"), ("end", "End"), ("wall", "Wall"), ("weight", $"Weight (cost {Grid.WeightCost})"),
+        ("frontier", "Queued"), ("visited", "Visited"), ("path", "Path"),
+    ];
+
+    [Parameter] public string? AlgoId { get; set; }
+
+    private PathAlgorithm algo = PathAlgorithms.All[0];
+    private readonly Grid grid = new(Rows, Cols);
+    private Visual[,] visuals = new Visual[Rows, Cols];
+    private Tool currentTool = Tool.Wall;
+    private Drag drag;
+    private int speed = 6;
+
+    private IEnumerator<PathStep>? steps;
+    private CancellationTokenSource? cts;
+    private bool running;
+    private bool finished;
+    private int visited;
+    private int pathLength;
+    private int pathCost;
+
+    private string Status =>
+        running ? "Searching…"
+        : finished ? (pathLength > 0 ? "Path found ✓" : "No path found")
+        : "Ready";
+
+    private IEnumerable<(string, string)> Facts =>
+    [
+        ("Weighted", algo.Weighted ? "Yes — uses cell costs" : "No — ignores weights"),
+        ("Shortest path", algo.Optimal ? "Guaranteed" : "Not guaranteed"),
+    ];
+
+    protected override void OnParametersSet()
+    {
+        var next = PathAlgorithms.Find(AlgoId);
+        if (next == algo) return;
+        algo = next;
+        ClearPath();
+    }
+
+    private static string ToolName(Tool t) => t switch
+    {
+        Tool.Wall => "Wall",
+        Tool.Weight => "Weight",
+        _ => "Erase",
+    };
+
+    // ── Drawing ─────────────────────────────────────────────────────────
+
+    private void Press(Point p)
+    {
+        if (running) return;
+        ClearPath();
+        if (p == grid.Start) drag = Drag.Start;
+        else if (p == grid.End) drag = Drag.End;
+        else
+        {
+            drag = Drag.Paint;
+            Paint(p);
+        }
+    }
+
+    private void Hover(Point p, MouseEventArgs e)
+    {
+        if (running || drag == Drag.None) return;
+        if ((e.Buttons & 1) == 0)
+        {
+            drag = Drag.None;
+            return;
+        }
+        switch (drag)
+        {
+            case Drag.Paint: Paint(p); break;
+            case Drag.Start when p != grid.End:
+                grid.Cells[p.Row, p.Col] = CellType.Empty;
+                grid.Start = p;
+                break;
+            case Drag.End when p != grid.Start:
+                grid.Cells[p.Row, p.Col] = CellType.Empty;
+                grid.End = p;
+                break;
+        }
+    }
+
+    private void Release() => drag = Drag.None;
+
+    private void Paint(Point p)
+    {
+        if (p == grid.Start || p == grid.End) return;
+        grid.Cells[p.Row, p.Col] = currentTool switch
+        {
+            Tool.Wall => CellType.Wall,
+            Tool.Weight => CellType.Weight,
+            _ => CellType.Empty,
+        };
+    }
+
+    private void ClearBoard()
+    {
+        StopLoop();
+        grid.Clear();
+        ClearPath();
+    }
+
+    private void RandomWalls()
+    {
+        StopLoop();
+        grid.Clear();
+        for (int r = 0; r < grid.Rows; r++)
+            for (int c = 0; c < grid.Cols; c++)
+            {
+                var p = new Point(r, c);
+                if (p != grid.Start && p != grid.End && Random.Shared.NextDouble() < 0.28)
+                    grid.Cells[r, c] = CellType.Wall;
+            }
+        ClearPath();
+    }
+
+    // ── Running ─────────────────────────────────────────────────────────
+
+    private void ClearPath()
+    {
+        StopLoop();
+        Array.Clear(visuals);
+        steps?.Dispose();
+        steps = null;
+        finished = false;
+        visited = pathLength = pathCost = 0;
+    }
+
+    private void StopLoop()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+        cts = null;
+        running = false;
+    }
+
+    private async Task TogglePlay()
+    {
+        if (running)
+        {
+            StopLoop();
+            return;
+        }
+        if (finished) ClearPath();
+
+        cts = new CancellationTokenSource();
+        var token = cts.Token;
+        running = true;
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                for (int k = 0; k < StepsPerTick[speed - 1] && Advance(); k++) { }
+                StateHasChanged();
+                if (finished) break;
+                await Task.Delay(DelayMs[speed - 1], token);
+            }
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            if (!token.IsCancellationRequested) StopLoop();
+        }
+    }
+
+    private void StepOnce() => Advance();
+
+    private bool Advance()
+    {
+        if (finished) return false;
+
+        steps ??= algo.Find(grid).GetEnumerator();
+        if (!steps.MoveNext())
+        {
+            finished = true;
+            return false;
+        }
+
+        var (kind, p) = steps.Current;
+        switch (kind)
+        {
+            case PathStepKind.Frontier:
+                if (visuals[p.Row, p.Col] == Visual.None) visuals[p.Row, p.Col] = Visual.Frontier;
+                break;
+            case PathStepKind.Visit:
+                visited++;
+                visuals[p.Row, p.Col] = Visual.Visited;
+                break;
+            case PathStepKind.Path:
+                visuals[p.Row, p.Col] = Visual.Path;
+                pathLength++;
+                if (p != grid.Start) pathCost += grid.Cost(p);
+                break;
+        }
+        return true;
+    }
+
+    private string CellClass(Point p)
+    {
+        if (p == grid.Start) return "start";
+        if (p == grid.End) return "end";
+        var type = grid.Cells[p.Row, p.Col];
+        var vis = visuals[p.Row, p.Col];
+        if (vis == Visual.Path) return type == CellType.Weight ? "path weight" : "path";
+        if (type == CellType.Wall) return "wall";
+        var weight = type == CellType.Weight ? " weight" : "";
+        return vis switch
+        {
+            Visual.Visited => "visited" + weight,
+            Visual.Frontier => "frontier" + weight,
+            _ => weight.Trim(),
+        };
+    }
+
+    public void Dispose() => StopLoop();
+}

@@ -1,0 +1,10 @@
+<ul class="legend">
+    @foreach (var (cls, label) in Items)
+    {
+        <li><span class="swatch @cls"></span>@label</li>
+    }
+</ul>
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<(string Class, string Label)> Items { get; set; } = [];
+}

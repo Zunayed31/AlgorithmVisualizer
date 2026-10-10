@@ -1,0 +1,16 @@
+<section class="info">
+    <h2>@Title</h2>
+    <p>@Description</p>
+    <dl class="facts">
+        @foreach (var (label, value) in Facts)
+        {
+            <div><dt>@label</dt><dd>@value</dd></div>
+        }
+    </dl>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public string Description { get; set; } = "";
+    [Parameter] public IEnumerable<(string Label, string Value)> Facts { get; set; } = [];
+}

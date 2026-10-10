@@ -1,0 +1,32 @@
+@page "/"
+@using AlgorithmVisualizer.Algorithms.Pathfinding
+@using AlgorithmVisualizer.Algorithms.Sorting
+
+<PageTitle>Algorithm Visualizer</PageTitle>
+
+<section class="hero">
+    <h1>See how algorithms think.</h1>
+    <p>Watch classic algorithms run one step at a time. Play, pause, step through, and change the speed to build intuition for how they really work.</p>
+</section>
+
+<h2>Sorting</h2>
+<div class="cards">
+    @foreach (var a in SortingAlgorithms.All)
+    {
+        <a class="card" href="@($"sorting/{a.Id}")">
+            <h3>@a.Name</h3>
+            <p>Average <code>@a.AverageCase</code> · Space <code>@a.Space</code></p>
+        </a>
+    }
+</div>
+
+<h2>Pathfinding</h2>
+<div class="cards">
+    @foreach (var a in PathAlgorithms.All)
+    {
+        <a class="card" href="@($"pathfinding/{a.Id}")">
+            <h3>@a.Name</h3>
+            <p>@(a.Optimal ? "Finds the shortest path" : "Does not guarantee the shortest path") · @(a.Weighted ? "weighted" : "unweighted")</p>
+        </a>
+    }
+</div>
