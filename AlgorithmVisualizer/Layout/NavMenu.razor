@@ -1,35 +1,14 @@
-@using AlgorithmVisualizer.Algorithms.Pathfinding
-@using AlgorithmVisualizer.Algorithms.Sorting
+<header class="topbar">
+    <a class="brand" href="">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <circle cx="16" cy="16" r="5" fill="var(--signal)" />
+            <ellipse cx="16" cy="16" rx="14" ry="6" stroke="var(--neuron)" stroke-width="1.5" transform="rotate(-25 16 16)" />
+        </svg>
+        <span>Algorithm Visualizer</span>
+    </a>
 
-<aside class="sidebar @(open ? "open" : null)">
-    <div class="sidebar-head">
-        <a class="brand" href="">
-            <span class="brand-mark" aria-hidden="true">▮▯▮</span>
-            <span>Algorithm<br />Visualizer</span>
-        </a>
-        <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="@open.ToString().ToLowerInvariant()" @onclick="Toggle">☰</button>
-    </div>
-
-    <nav class="nav" @onclick="Close">
-        <NavLink class="nav-item" href="" Match="NavLinkMatch.All">Home</NavLink>
-
-        <div class="nav-section">Sorting</div>
-        @foreach (var a in SortingAlgorithms.All)
-        {
-            <NavLink class="nav-item sub" href="@($"sorting/{a.Id}")">@a.Name</NavLink>
-        }
-
-        <div class="nav-section">Pathfinding</div>
-        @foreach (var a in PathAlgorithms.All)
-        {
-            <NavLink class="nav-item sub" href="@($"pathfinding/{a.Id}")">@a.Name</NavLink>
-        }
+    <nav class="nav" aria-label="Main">
+        <NavLink class="nav-item" href="sorting" Match="NavLinkMatch.Prefix">Sorting</NavLink>
+        <NavLink class="nav-item" href="pathfinding" Match="NavLinkMatch.Prefix">Pathfinding</NavLink>
     </nav>
-</aside>
-
-@code {
-    private bool open;
-
-    private void Toggle() => open = !open;
-    private void Close() => open = false;
-}
+</header>

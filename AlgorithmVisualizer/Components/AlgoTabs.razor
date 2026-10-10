@@ -1,13 +1,21 @@
-<nav class="tabs" role="tablist" aria-label="Algorithms">
-    @foreach (var (id, name) in Items)
-    {
-        var active = id == SelectedId;
-        <a role="tab" class="tab @(active ? "active" : null)" aria-selected="@active.ToString().ToLowerInvariant()" href="@($"{BasePath}/{id}")">@name</a>
-    }
-</nav>
+<div class="page-head">
+    <div>
+        <span class="mono accent">@Eyebrow</span>
+        <h1>@Title</h1>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Algorithms">
+        @foreach (var (id, name) in Items)
+        {
+            var active = id == SelectedId;
+            <a role="tab" class="tab @(active ? "active" : null)" aria-selected="@active.ToString().ToLowerInvariant()" href="@($"{BasePath}/{id}")">@name</a>
+        }
+    </nav>
+</div>
 
 @code {
     [Parameter, EditorRequired] public string BasePath { get; set; } = "";
     [Parameter, EditorRequired] public IReadOnlyList<(string Id, string Name)> Items { get; set; } = [];
     [Parameter, EditorRequired] public string SelectedId { get; set; } = "";
+    [Parameter] public string Eyebrow { get; set; } = "";
+    [Parameter] public string Title { get; set; } = "";
 }
