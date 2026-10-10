@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="AlgorithmVisualizer.Tests/AlgorithmVisualizer.Tests.csproj" />
   <Project Path="AlgorithmVisualizer/AlgorithmVisualizer.csproj" />
 </Solution>

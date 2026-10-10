@@ -1,0 +1,13 @@
+<nav class="tabs" role="tablist" aria-label="Algorithms">
+    @foreach (var (id, name) in Items)
+    {
+        var active = id == SelectedId;
+        <a role="tab" class="tab @(active ? "active" : null)" aria-selected="@active.ToString().ToLowerInvariant()" href="@($"{BasePath}/{id}")">@name</a>
+    }
+</nav>
+
+@code {
+    [Parameter, EditorRequired] public string BasePath { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<(string Id, string Name)> Items { get; set; } = [];
+    [Parameter, EditorRequired] public string SelectedId { get; set; } = "";
+}

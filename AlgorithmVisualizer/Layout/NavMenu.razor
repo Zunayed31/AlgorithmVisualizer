@@ -1,0 +1,35 @@
+@using AlgorithmVisualizer.Algorithms.Pathfinding
+@using AlgorithmVisualizer.Algorithms.Sorting
+
+<aside class="sidebar @(open ? "open" : null)">
+    <div class="sidebar-head">
+        <a class="brand" href="">
+            <span class="brand-mark" aria-hidden="true">▮▯▮</span>
+            <span>Algorithm<br />Visualizer</span>
+        </a>
+        <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="@open.ToString().ToLowerInvariant()" @onclick="Toggle">☰</button>
+    </div>
+
+    <nav class="nav" @onclick="Close">
+        <NavLink class="nav-item" href="" Match="NavLinkMatch.All">Home</NavLink>
+
+        <div class="nav-section">Sorting</div>
+        @foreach (var a in SortingAlgorithms.All)
+        {
+            <NavLink class="nav-item sub" href="@($"sorting/{a.Id}")">@a.Name</NavLink>
+        }
+
+        <div class="nav-section">Pathfinding</div>
+        @foreach (var a in PathAlgorithms.All)
+        {
+            <NavLink class="nav-item sub" href="@($"pathfinding/{a.Id}")">@a.Name</NavLink>
+        }
+    </nav>
+</aside>
+
+@code {
+    private bool open;
+
+    private void Toggle() => open = !open;
+    private void Close() => open = false;
+}

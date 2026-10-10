@@ -1,0 +1,225 @@
+@page "/sorting"
+@page "/sorting/{AlgoId}"
+@using AlgorithmVisualizer.Algorithms.Sorting
+@implements IDisposable
+
+<PageTitle>@algo.Name · Algorithm Visualizer</PageTitle>
+
+<h1>Sorting</h1>
+
+<AlgoTabs BasePath="sorting" Items="tabs" SelectedId="@algo.Id" />
+
+<div class="controls">
+    <button class="btn primary" @onclick="TogglePlay">@(running ? "Pause" : finished ? "Replay" : "Play")</button>
+    <button class="btn" @onclick="StepOnce" disabled="@running">Step</button>
+    <button class="btn" @onclick="ResetRun">Reset</button>
+    <button class="btn" @onclick="Shuffle">New array</button>
+
+    <label class="slider">Size <output>@size</output>
+        <input type="range" min="8" max="150" value="@size" @onchange="OnSizeChanged" />
+    </label>
+    <label class="slider">Speed <output>@speed</output>
+        <input type="range" min="1" max="10" @bind="speed" @bind:event="oninput" />
+    </label>
+</div>
+
+<div class="stage">
+    <div class="bars @(size <= 30 ? "labeled" : null)">
+        @for (int i = 0; i < data.Length; i++)
+        {
+            <div class="bar @BarClass(i)" style="height:@(data[i] * 100 / size)%"><span>@data[i]</span></div>
+        }
+    </div>
+    <div class="stats">
+        <span>Comparisons <b>@comparisons</b></span>
+        <span>Swaps / writes <b>@moves</b></span>
+        <span class="status">@(finished ? "Sorted ✓" : running ? "Sorting…" : "Ready")</span>
+    </div>
+</div>
+
+<Legend Items="legend" />
+
+<AlgoInfo Title="@algo.Name" Description="@algo.Description" Facts="Facts" />
+
+@code {
+    private enum Mark : byte { None, Compare, Swap, Write }
+
+    private static readonly int[] DelayMs = [400, 200, 100, 50, 25, 12, 6, 3, 1, 1];
+    private static readonly int[] StepsPerTick = [1, 1, 1, 1, 1, 1, 1, 2, 4, 12];
+
+    private static readonly IReadOnlyList<(string, string)> tabs =
+        SortingAlgorithms.All.Select(a => (a.Id, a.Name)).ToList();
+
+    private static readonly (string, string)[] legend =
+    [
+        ("", "Unsorted"), ("compare", "Comparing"), ("swap", "Swapped"), ("write", "Written"), ("pivot", "Pivot / minimum"), ("sorted", "Sorted"),
+    ];
+
+    [Parameter] public string? AlgoId { get; set; }
+
+    private SortAlgorithm algo = SortingAlgorithms.All[0];
+    private int size = 50;
+    private int speed = 6;
+
+    private int[] original = [];
+    private int[] data = [];
+    private Mark[] marks = [];
+    private bool[] sorted = [];
+    private int pivot = -1;
+    private readonly List<int> transient = [];
+
+    private IEnumerator<SortStep>? steps;
+    private CancellationTokenSource? cts;
+    private bool running;
+    private bool finished;
+    private int comparisons;
+    private int moves;
+
+    private IEnumerable<(string, string)> Facts =>
+    [
+        ("Best", algo.BestCase), ("Average", algo.AverageCase), ("Worst", algo.WorstCase),
+        ("Space", algo.Space), ("Stable", algo.Stable ? "Yes" : "No"),
+    ];
+
+    protected override void OnInitialized() => Shuffle();
+
+    protected override void OnParametersSet()
+    {
+        var next = SortingAlgorithms.Find(AlgoId);
+        if (next == algo) return;
+        algo = next;
+        ResetRun();
+    }
+
+    private void Shuffle()
+    {
+        var values = Enumerable.Range(1, size).ToArray();
+        Random.Shared.Shuffle(values);
+        original = values;
+        ResetRun();
+    }
+
+    private void OnSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var n)) size = Math.Clamp(n, 8, 150);
+        Shuffle();
+    }
+
+    private void ResetRun()
+    {
+        StopLoop();
+        data = (int[])original.Clone();
+        marks = new Mark[data.Length];
+        sorted = new bool[data.Length];
+        transient.Clear();
+        pivot = -1;
+        steps?.Dispose();
+        steps = null;
+        finished = false;
+        comparisons = moves = 0;
+    }
+
+    private void StopLoop()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+        cts = null;
+        running = false;
+    }
+
+    private async Task TogglePlay()
+    {
+        if (running)
+        {
+            StopLoop();
+            return;
+        }
+        if (finished) ResetRun();
+
+        cts = new CancellationTokenSource();
+        var token = cts.Token;
+        running = true;
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                for (int k = 0; k < StepsPerTick[speed - 1] && Advance(); k++) { }
+                StateHasChanged();
+                if (finished) break;
+                await Task.Delay(DelayMs[speed - 1], token);
+            }
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            if (!token.IsCancellationRequested) StopLoop();
+        }
+    }
+
+    private void StepOnce() => Advance();
+
+    /// <summary>Applies the next algorithm step to the visual state. Returns false once finished.</summary>
+    private bool Advance()
+    {
+        if (finished) return false;
+
+        foreach (var i in transient) marks[i] = Mark.None;
+        transient.Clear();
+
+        steps ??= algo.Sort(data).GetEnumerator();
+        if (!steps.MoveNext())
+        {
+            Array.Fill(sorted, true);
+            pivot = -1;
+            finished = true;
+            return false;
+        }
+
+        var s = steps.Current;
+        switch (s.Kind)
+        {
+            case SortStepKind.Compare:
+                comparisons++;
+                Flag(s.A, Mark.Compare);
+                Flag(s.B, Mark.Compare);
+                break;
+            case SortStepKind.Swap:
+                moves++;
+                Flag(s.A, Mark.Swap);
+                Flag(s.B, Mark.Swap);
+                break;
+            case SortStepKind.Write:
+                moves++;
+                Flag(s.A, Mark.Write);
+                break;
+            case SortStepKind.Pivot:
+                pivot = s.A;
+                break;
+            case SortStepKind.Sorted:
+                sorted[s.A] = true;
+                if (pivot == s.A) pivot = -1;
+                break;
+        }
+        return true;
+    }
+
+    private void Flag(int index, Mark mark)
+    {
+        marks[index] = mark;
+        transient.Add(index);
+    }
+
+    private string? BarClass(int i)
+    {
+        if (sorted[i]) return "sorted";
+        return marks[i] switch
+        {
+            Mark.Compare => "compare",
+            Mark.Swap => "swap",
+            Mark.Write => "write",
+            _ => i == pivot ? "pivot" : null,
+        };
+    }
+
+    public void Dispose() => StopLoop();
+}
